@@ -1,0 +1,49 @@
+{% trans_default_domain 'FOSUserBundle' %}
+
+<div class="container">
+    <div class="columns">
+
+        <div class="column is-3">
+            {% include 'UtilisateursBundle:Default:modulesUsed/utilisateursConnecte.html.twig' %}
+        </div>
+
+        <div class="column is-9">
+
+            <div class="tile is-ancestor">
+                <div class="tile is-parent is-12">
+                    <article class="tile is-child box is-12">
+                        <h2 class="title is-3 indieflower">Mes informations</h2>
+                    </article>
+                </div>
+            </div>
+
+            <div class="tile is-ancestor">
+                <div class="tile is-parent is-12">
+                    <article class="tile is-child box is-12">
+                        <table class="table">
+                            <tr>
+                                <td class="has-text-right"><b>{{ 'profile.show.username'|trans }}:&nbsp;</b></td>
+                                <td>{{ user.username }}</td>
+                            </tr>
+                            <tr>
+                                <td class="has-text-right"><b>{{ 'profile.show.email'|trans }}:&nbsp;</b></td>
+                                <td>{{ user.email }}</td>
+                            </tr>
+                            {% if user.adresses|length > 0 %}
+                                {% for adresse in user.adresses %}
+                                    <tr>
+                                        <td class="has-text-right"><b>Adresse {{ loop.index }}:&nbsp;</b></td>
+                                        <td>{{ adresse }}</td>
+                                    </tr>
+                                {% endfor %}
+                            {% endif %}
+
+                        </table>
+                    </article>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+</div>
