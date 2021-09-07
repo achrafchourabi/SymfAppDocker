@@ -1,0 +1,99 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: nginx-config
+data:
+  nginx.conf: |
+    events {
+    }
+    http {
+      server {
+      
+       root /var/www/project/web;          
+          location / {
+        # try to serve file directly, fallback to app.php
+              #try_files $uri /app.php$is_args$args;
+          }
+          location ~ ^/(app_dev|config)\.php(/|$) {
+              fastcgi_pass 127.0.0.1:9000;
+              fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+              include fastcgi.conf;
+          }
+          location ~ ^/app\.php(/|$) {
+              fastcgi_pass 127.0.0.1:9000;
+              fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name; 
+              include fastcgi.conf;
+              internal;
+          }
+           
+          error_log /var/log/nginx/project_error.log;
+          access_log /var/log/nginx/project_access.log;    
+
+      }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app
+
+  labels:
+    name: app
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 2
+  selector:
+    matchLabels:
+      name: app
+  template:
+    metadata:
+      name: app
+      labels:
+        name: app
+    spec:
+      volumes:
+        - name: nginx-config-volume
+          configMap:
+            name: nginx-config
+      containers:
+        - image: ash92/repo_achraf_chourabi:symfappnovendor
+          name: app
+          imagePullPolicy: Always
+          ports:
+          - containerPort: 80
+
+          resources:
+            limits:
+              cpu: 300m
+              memory: 200Mi
+            requests:
+              cpu: 250m
+              memory: 150Mi
+        - image: nginx:alpine
+          name: app-nginx
+          volumeMounts:
+            - name: nginx-config-volume
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+          resources:
+            limits:
+              cpu: 100m
+            requests:
+              cpu: 50m
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: app
+
+spec:
+  selector:
+    name: app
+  ports:
+    - port: 80
+      targetPort: 80
+  type: LoadBalancer
