@@ -7,25 +7,41 @@ data:
     events {
     }
     http {
+        include /etc/nginx/mime.types;
       server {
       
-       root /var/www/project/web;          
+       root /var/www/project/publictest;          
           location / {
         # try to serve file directly, fallback to app.php
-              #try_files $uri /app.php$is_args$args;
+              try_files $uri /app.php$is_args$args;
           }
-          location ~ ^/(app_dev|config)\.php(/|$) {
+          location ~ ^/(web/app_dev|app_dev|config)\.php(/|$) {
               fastcgi_pass 127.0.0.1:9000;
+              fastcgi_split_path_info ^(.+\.php)(/.*)$;
               fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
-              include fastcgi.conf;
+              include fastcgi_params;
           }
           location ~ ^/app\.php(/|$) {
               fastcgi_pass 127.0.0.1:9000;
+              fastcgi_split_path_info ^(.+\.php)(/.*)$;
               fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name; 
-              include fastcgi.conf;
+              include fastcgi_params;
               internal;
           }
-           
+          location ~ \.css {
+              #root /var/www/project/public;
+              expires max;
+          }
+          location ~* \.(jpg|jpeg|png|gif|ico|js|woff|woff2|ttf)$ {
+               # root /var/www/project/public;
+               access_log off;
+               expires max;
+          }
+          location ~* \.(js|css)$ {
+               expires 1y;
+               log_not_found off;
+          }
+          rewrite ^/assets/([a-z\-]+)-([a-z0-9]+).(css|js) /assets/$1.$3; 
           error_log /var/log/nginx/project_error.log;
           access_log /var/log/nginx/project_access.log;    
 
@@ -56,11 +72,13 @@ spec:
         name: app
     spec:
       volumes:
+        - name: shared-files
+          emptyDir: {}
         - name: nginx-config-volume
           configMap:
             name: nginx-config
       containers:
-        - image: ash92/repo_achraf_chourabi:symfappnovendor
+        - image: ash92/repo_achraf_chourabi:symfapplast
           name: app
           imagePullPolicy: Always
           ports:
@@ -73,9 +91,18 @@ spec:
             requests:
               cpu: 250m
               memory: 150Mi
+          volumeMounts:
+            - name: shared-files
+              mountPath: /var/www/project/publictest
+          lifecycle:
+            postStart:
+              exec:
+                command: ["/bin/sh", "-c", "cp -r /var/www/project/public/. /var/www/project/publictest"] 
         - image: nginx:alpine
           name: app-nginx
           volumeMounts:
+            - name: shared-files
+              mountPath: /var/www/project/publictest
             - name: nginx-config-volume
               mountPath: /etc/nginx/nginx.conf
               subPath: nginx.conf
